@@ -3,6 +3,8 @@ package com.wodnsivar.competitionportal.event.dto;
 import com.wodnsivar.competitionportal.enums.EventStatus;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
+import com.wodnsivar.competitionportal.enums.TiebreakType;
+import com.wodnsivar.competitionportal.enums.WeightUnit;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -30,6 +32,27 @@ public record EventCreateRequest(
         RankingDirection rankingDirection,
 
         Integer timeCapSeconds,
+
+        Integer totalReps,
+
+        Integer repsPerRound,
+
+        Boolean cappedScoringEnabled,
+
+        WeightUnit weightUnit,
+
+        TiebreakType tiebreakType,
+
+        @Size(max = 180, message = "Tiebreak label must be 180 characters or less")
+        String tiebreakLabel,
+
+        String tiebreakInstructions,
+
+        RankingDirection tiebreakRankingDirection,
+
+        WeightUnit tiebreakWeightUnit,
+
+        Boolean tiebreakRequired,
 
         Integer displayOrder,
 

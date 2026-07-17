@@ -5,6 +5,8 @@ import com.wodnsivar.competitionportal.competition.entity.Competition;
 import com.wodnsivar.competitionportal.enums.EventStatus;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
+import com.wodnsivar.competitionportal.enums.TiebreakType;
+import com.wodnsivar.competitionportal.enums.WeightUnit;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -73,6 +75,40 @@ public class CompetitionEvent extends BaseEntity {
 
     @Column(name = "time_cap_seconds")
     private Integer timeCapSeconds;
+
+    @Column(name = "total_reps")
+    private Integer totalReps;
+
+    @Column(name = "reps_per_round")
+    private Integer repsPerRound;
+
+    @Column(name = "capped_scoring_enabled", nullable = false, columnDefinition = "boolean default false")
+    private Boolean cappedScoringEnabled;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "weight_unit", length = 20)
+    private WeightUnit weightUnit;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tiebreak_type", nullable = false, length = 30, columnDefinition = "varchar(30) default 'NONE'")
+    private TiebreakType tiebreakType;
+
+    @Column(name = "tiebreak_label", length = 180)
+    private String tiebreakLabel;
+
+    @Column(name = "tiebreak_instructions", columnDefinition = "TEXT")
+    private String tiebreakInstructions;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tiebreak_ranking_direction", length = 40)
+    private RankingDirection tiebreakRankingDirection;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tiebreak_weight_unit", length = 20)
+    private WeightUnit tiebreakWeightUnit;
+
+    @Column(name = "tiebreak_required", nullable = false, columnDefinition = "boolean default false")
+    private Boolean tiebreakRequired;
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;

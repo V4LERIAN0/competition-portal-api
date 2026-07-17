@@ -9,6 +9,8 @@ import com.wodnsivar.competitionportal.enums.EventStatus;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
 import com.wodnsivar.competitionportal.enums.VisibilityStatus;
+import com.wodnsivar.competitionportal.enums.TiebreakType;
+import com.wodnsivar.competitionportal.enums.WeightUnit;
 import com.wodnsivar.competitionportal.event.dto.EventCreateRequest;
 import com.wodnsivar.competitionportal.event.dto.EventPublicResponse;
 import com.wodnsivar.competitionportal.event.dto.EventResponse;
@@ -35,7 +37,13 @@ public class EventService {
         String normalizedEventCode = normalizeEventCode(request.eventCode());
 
         validateEventCodeIsUnique(competitionId, normalizedEventCode, null);
-        validateScoreConfiguration(request.scoreType(), request.rankingDirection(), request.timeCapSeconds());
+        TiebreakType tiebreakType = defaultIfNull(request.tiebreakType(), TiebreakType.NONE);
+        validateScoreConfiguration(
+                request.scoreType(), request.rankingDirection(), request.timeCapSeconds(),
+                request.totalReps(), request.repsPerRound(), request.cappedScoringEnabled(),
+                request.weightUnit(), tiebreakType, request.tiebreakLabel(),
+                request.tiebreakRankingDirection(), request.tiebreakWeightUnit(), request.tiebreakRequired()
+        );
 
         CompetitionEvent event = CompetitionEvent.builder()
                 .competition(competition)
@@ -47,6 +55,16 @@ public class EventService {
                 .scoreType(request.scoreType())
                 .rankingDirection(request.rankingDirection())
                 .timeCapSeconds(request.timeCapSeconds())
+                .totalReps(request.totalReps())
+                .repsPerRound(request.repsPerRound())
+                .cappedScoringEnabled(defaultIfNull(request.cappedScoringEnabled(), false))
+                .weightUnit(request.weightUnit())
+                .tiebreakType(tiebreakType)
+                .tiebreakLabel(tiebreakType == TiebreakType.NONE ? null : normalizeNullable(request.tiebreakLabel()))
+                .tiebreakInstructions(tiebreakType == TiebreakType.NONE ? null : normalizeNullable(request.tiebreakInstructions()))
+                .tiebreakRankingDirection(tiebreakType == TiebreakType.NONE ? null : request.tiebreakRankingDirection())
+                .tiebreakWeightUnit(tiebreakType == TiebreakType.WEIGHT ? request.tiebreakWeightUnit() : null)
+                .tiebreakRequired(tiebreakType != TiebreakType.NONE && defaultIfNull(request.tiebreakRequired(), false))
                 .displayOrder(defaultIfNull(request.displayOrder(), 0))
                 .publicVisible(defaultIfNull(request.publicVisible(), false))
                 .scoreVisible(defaultIfNull(request.scoreVisible(), false))
@@ -81,7 +99,13 @@ public class EventService {
         Long competitionId = event.getCompetition().getId();
 
         validateEventCodeIsUnique(competitionId, normalizedEventCode, event.getId());
-        validateScoreConfiguration(request.scoreType(), request.rankingDirection(), request.timeCapSeconds());
+        TiebreakType tiebreakType = defaultIfNull(request.tiebreakType(), TiebreakType.NONE);
+        validateScoreConfiguration(
+                request.scoreType(), request.rankingDirection(), request.timeCapSeconds(),
+                request.totalReps(), request.repsPerRound(), request.cappedScoringEnabled(),
+                request.weightUnit(), tiebreakType, request.tiebreakLabel(),
+                request.tiebreakRankingDirection(), request.tiebreakWeightUnit(), request.tiebreakRequired()
+        );
 
         event.setEventCode(normalizedEventCode);
         event.setName(request.name().trim());
@@ -91,6 +115,16 @@ public class EventService {
         event.setScoreType(request.scoreType());
         event.setRankingDirection(request.rankingDirection());
         event.setTimeCapSeconds(request.timeCapSeconds());
+        event.setTotalReps(request.totalReps());
+        event.setRepsPerRound(request.repsPerRound());
+        event.setCappedScoringEnabled(defaultIfNull(request.cappedScoringEnabled(), false));
+        event.setWeightUnit(request.weightUnit());
+        event.setTiebreakType(tiebreakType);
+        event.setTiebreakLabel(tiebreakType == TiebreakType.NONE ? null : normalizeNullable(request.tiebreakLabel()));
+        event.setTiebreakInstructions(tiebreakType == TiebreakType.NONE ? null : normalizeNullable(request.tiebreakInstructions()));
+        event.setTiebreakRankingDirection(tiebreakType == TiebreakType.NONE ? null : request.tiebreakRankingDirection());
+        event.setTiebreakWeightUnit(tiebreakType == TiebreakType.WEIGHT ? request.tiebreakWeightUnit() : null);
+        event.setTiebreakRequired(tiebreakType != TiebreakType.NONE && defaultIfNull(request.tiebreakRequired(), false));
         event.setDisplayOrder(defaultIfNull(request.displayOrder(), event.getDisplayOrder()));
         event.setPublicVisible(defaultIfNull(request.publicVisible(), event.getPublicVisible()));
         event.setScoreVisible(defaultIfNull(request.scoreVisible(), event.getScoreVisible()));
@@ -158,7 +192,16 @@ public class EventService {
     private void validateScoreConfiguration(
             ScoreType scoreType,
             RankingDirection rankingDirection,
-            Integer timeCapSeconds
+            Integer timeCapSeconds,
+            Integer totalReps,
+            Integer repsPerRound,
+            Boolean cappedScoringEnabled,
+            WeightUnit weightUnit,
+            TiebreakType tiebreakType,
+            String tiebreakLabel,
+            RankingDirection tiebreakRankingDirection,
+            WeightUnit tiebreakWeightUnit,
+            Boolean tiebreakRequired
     ) {
         if (scoreType == ScoreType.FOR_TIME && rankingDirection != RankingDirection.LOWER_IS_BETTER) {
             throw new ConflictException("FOR_TIME events should use LOWER_IS_BETTER ranking direction.");
@@ -167,13 +210,88 @@ public class EventService {
         if ((scoreType == ScoreType.AMRAP_REPS ||
                 scoreType == ScoreType.MAX_WEIGHT ||
                 scoreType == ScoreType.EMOM_REPS ||
+                scoreType == ScoreType.ROUNDS_COMPLETED ||
                 scoreType == ScoreType.POINTS) &&
                 rankingDirection != RankingDirection.HIGHER_IS_BETTER) {
             throw new ConflictException(scoreType + " events should use HIGHER_IS_BETTER ranking direction.");
         }
 
-        if (timeCapSeconds != null && timeCapSeconds < 0) {
-            throw new ConflictException("Time cap cannot be negative.");
+        if (timeCapSeconds != null && timeCapSeconds <= 0) {
+            throw new ConflictException("Time cap must be greater than zero seconds.");
+        }
+
+        if (totalReps != null && totalReps <= 0) {
+            throw new ConflictException("Total reps must be greater than zero.");
+        }
+
+        if (repsPerRound != null && repsPerRound <= 0) {
+            throw new ConflictException("Reps per round must be greater than zero.");
+        }
+
+        if (repsPerRound != null && scoreType != ScoreType.AMRAP_REPS && scoreType != ScoreType.EMOM_REPS) {
+            throw new ConflictException("Reps per round is only supported for AMRAP_REPS and EMOM_REPS events.");
+        }
+
+        if (Boolean.TRUE.equals(cappedScoringEnabled)) {
+            if (scoreType != ScoreType.FOR_TIME) {
+                throw new ConflictException("Capped scoring is only supported for FOR_TIME events.");
+            }
+            if (timeCapSeconds == null || totalReps == null) {
+                throw new ConflictException("Capped FOR_TIME events require both a time cap and total reps.");
+            }
+        }
+
+        if (scoreType == ScoreType.MAX_WEIGHT && weightUnit == null) {
+            throw new ConflictException("MAX_WEIGHT events require a weight unit.");
+        }
+
+        if (scoreType != ScoreType.MAX_WEIGHT && weightUnit != null) {
+            throw new ConflictException("A primary weight unit is only valid for MAX_WEIGHT events.");
+        }
+
+        validateTiebreakConfiguration(
+                tiebreakType, tiebreakLabel, tiebreakRankingDirection,
+                tiebreakWeightUnit, tiebreakRequired
+        );
+    }
+
+    private void validateTiebreakConfiguration(
+            TiebreakType tiebreakType,
+            String label,
+            RankingDirection direction,
+            WeightUnit weightUnit,
+            Boolean required
+    ) {
+        if (tiebreakType == TiebreakType.NONE) {
+            if (Boolean.TRUE.equals(required)) {
+                throw new ConflictException("A tiebreak cannot be required when its type is NONE.");
+            }
+            return;
+        }
+
+        if (label == null || label.isBlank()) {
+            throw new ConflictException("Configured tiebreaks require a clear label.");
+        }
+
+        if (direction == null) {
+            throw new ConflictException("Configured tiebreaks require a ranking direction.");
+        }
+
+        if (tiebreakType == TiebreakType.TIME && direction != RankingDirection.LOWER_IS_BETTER) {
+            throw new ConflictException("TIME tiebreaks must use LOWER_IS_BETTER ranking direction.");
+        }
+
+        if ((tiebreakType == TiebreakType.REPS || tiebreakType == TiebreakType.WEIGHT || tiebreakType == TiebreakType.POINTS)
+                && direction != RankingDirection.HIGHER_IS_BETTER) {
+            throw new ConflictException(tiebreakType + " tiebreaks must use HIGHER_IS_BETTER ranking direction.");
+        }
+
+        if (tiebreakType == TiebreakType.WEIGHT && weightUnit == null) {
+            throw new ConflictException("WEIGHT tiebreaks require a weight unit.");
+        }
+
+        if (tiebreakType != TiebreakType.WEIGHT && weightUnit != null) {
+            throw new ConflictException("A tiebreak weight unit is only valid for WEIGHT tiebreaks.");
         }
     }
 
@@ -189,6 +307,14 @@ public class EventService {
 
     private String normalizeEventCode(String eventCode) {
         return eventCode.trim().toUpperCase();
+    }
+
+    private String normalizeNullable(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
     }
 
     private <T> T defaultIfNull(T value, T defaultValue) {
@@ -208,6 +334,16 @@ public class EventService {
                 event.getScoreType(),
                 event.getRankingDirection(),
                 event.getTimeCapSeconds(),
+                event.getTotalReps(),
+                event.getRepsPerRound(),
+                event.getCappedScoringEnabled(),
+                event.getWeightUnit(),
+                event.getTiebreakType(),
+                event.getTiebreakLabel(),
+                event.getTiebreakInstructions(),
+                event.getTiebreakRankingDirection(),
+                event.getTiebreakWeightUnit(),
+                event.getTiebreakRequired(),
                 event.getDisplayOrder(),
                 event.getPublicVisible(),
                 event.getScoreVisible(),
@@ -229,6 +365,16 @@ public class EventService {
                 event.getScoreType(),
                 event.getRankingDirection(),
                 event.getTimeCapSeconds(),
+                event.getTotalReps(),
+                event.getRepsPerRound(),
+                event.getCappedScoringEnabled(),
+                event.getWeightUnit(),
+                event.getTiebreakType(),
+                event.getTiebreakLabel(),
+                event.getTiebreakInstructions(),
+                event.getTiebreakRankingDirection(),
+                event.getTiebreakWeightUnit(),
+                event.getTiebreakRequired(),
                 event.getDisplayOrder(),
                 event.getScoreVisible(),
                 event.getStatus()

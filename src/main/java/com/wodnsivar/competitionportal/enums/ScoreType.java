@@ -5,6 +5,7 @@ public enum ScoreType {
     AMRAP_REPS,
     MAX_WEIGHT,
     EMOM_REPS,
+    ROUNDS_COMPLETED,
     POINTS,
     CUSTOM
 }

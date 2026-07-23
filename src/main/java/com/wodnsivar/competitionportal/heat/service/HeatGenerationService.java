@@ -31,8 +31,8 @@ public class HeatGenerationService {
 
     public List<HeatResponse> generateRandom(Long eventId, GenerateRandomHeatsRequest request) {
         CompetitionEvent event = heatService.findEvent(eventId);
-        if (heatRepository.existsByEventId(eventId)) {
-            throw new ConflictException("This event already has heats. Review or remove them before generation.");
+        if (heatRepository.existsByEventIdAndStatusNot(eventId, HeatStatus.CANCELLED)) {
+            throw new ConflictException("This event already has active heats. Review or cancel them before generation.");
         }
         List<CompetitionAthlete> athletes = request.categoryId() == null
                 ? athleteRepository.findByCompetitionIdAndStatusNotInOrderByFullNameAsc(
@@ -45,7 +45,11 @@ public class HeatGenerationService {
 
         List<CompetitionAthlete> shuffled = new ArrayList<>(athletes);
         Collections.shuffle(shuffled, request.randomSeed() == null ? new Random() : new Random(request.randomSeed()));
-        int startingNumber = request.startingHeatNumber() == null ? 1 : request.startingHeatNumber();
+        int requestedStartingNumber = request.startingHeatNumber() == null ? 1 : request.startingHeatNumber();
+        int nextAvailableNumber = heatRepository.findFirstByEventIdOrderByHeatNumberDesc(eventId)
+                .map(heat -> heat.getHeatNumber() + 1)
+                .orElse(1);
+        int startingNumber = Math.max(requestedStartingNumber, nextAvailableNumber);
         int interval = request.minutesBetweenHeats() == null ? 10 : request.minutesBetweenHeats();
         List<CompetitionHeat> generated = new ArrayList<>();
 

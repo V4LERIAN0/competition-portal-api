@@ -37,14 +37,17 @@ public class HeatService {
     public HeatResponse createHeat(Long eventId, HeatCreateRequest request) {
         CompetitionEvent event = findEvent(eventId);
         validateUniqueHeatNumber(eventId, request.heatNumber(), null);
+        HeatStatus status = defaultIfNull(request.status(), HeatStatus.SCHEDULED);
         CompetitionHeat heat = CompetitionHeat.builder()
                 .competition(event.getCompetition()).event(event)
                 .name(request.name().trim()).heatNumber(request.heatNumber())
                 .scheduledTime(request.scheduledTime())
-                .status(defaultIfNull(request.status(), HeatStatus.SCHEDULED))
+                .status(status)
                 .capacity(request.capacity()).notes(normalizeNullable(request.notes()))
                 .displayOrder(defaultIfNull(request.displayOrder(), request.heatNumber()))
-                .publicVisible(defaultIfNull(request.publicVisible(), false)).build();
+                .publicVisible(status == HeatStatus.CANCELLED
+                        ? false
+                        : defaultIfNull(request.publicVisible(), false)).build();
         return toResponse(heatRepository.save(heat));
     }
 
@@ -76,7 +79,7 @@ public class HeatService {
         heat.setCapacity(request.capacity());
         heat.setNotes(normalizeNullable(request.notes()));
         heat.setDisplayOrder(request.displayOrder());
-        heat.setPublicVisible(request.publicVisible());
+        heat.setPublicVisible(request.status() == HeatStatus.CANCELLED ? false : request.publicVisible());
         return toResponse(heatRepository.save(heat));
     }
 
@@ -132,7 +135,9 @@ public class HeatService {
                 || competition.getStatus() == CompetitionStatus.ARCHIVED) {
             throw new ResourceNotFoundException("Competition not publicly available with slug: " + competitionSlug);
         }
-        return heatRepository.findByCompetitionIdAndPublicVisibleTrueOrderByScheduledTimeAscHeatNumberAsc(competition.getId())
+        return heatRepository
+                .findByCompetitionIdAndPublicVisibleTrueAndStatusNotOrderByScheduledTimeAscHeatNumberAsc(
+                        competition.getId(), HeatStatus.CANCELLED)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -162,8 +167,8 @@ public class HeatService {
         if (!athlete.getCompetition().getId().equals(heat.getCompetition().getId())) {
             throw new BadRequestException("The athlete and heat must belong to the same competition.");
         }
-        boolean alreadyAssigned = assignmentRepository.existsForEventAndAthlete(
-                heat.getEvent().getId(), athlete.getId());
+        boolean alreadyAssigned = assignmentRepository.existsForEventAndAthleteExcludingHeatStatus(
+                heat.getEvent().getId(), athlete.getId(), HeatStatus.CANCELLED);
         if (alreadyAssigned) {
             CompetitionHeatAthlete current = assignmentId == null ? null : assignmentRepository.findById(assignmentId).orElse(null);
             if (current == null || !current.getAthlete().getId().equals(athlete.getId())) {

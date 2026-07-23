@@ -63,7 +63,7 @@ public class CompetitionHeat extends BaseEntity {
     private Boolean publicVisible;
 
     @OneToMany(mappedBy = "heat", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("laneNumber ASC, stationNumber ASC, id ASC")
+    @OrderBy("positionNumber ASC, id ASC")
     @Builder.Default
     private List<CompetitionHeatAthlete> assignments = new ArrayList<>();
 }

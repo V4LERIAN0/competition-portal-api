@@ -11,8 +11,7 @@ public record HeatAssignmentResponse(
         String bibNumber,
         Long categoryId,
         String categoryName,
-        Integer laneNumber,
-        Integer stationNumber,
+        Integer positionNumber,
         CheckInStatus checkInStatus,
         LocalDateTime checkInTime
 ) {}

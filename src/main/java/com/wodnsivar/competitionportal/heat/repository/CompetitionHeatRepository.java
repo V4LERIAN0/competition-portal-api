@@ -14,5 +14,6 @@ public interface CompetitionHeatRepository extends JpaRepository<CompetitionHeat
     boolean existsByEventIdAndHeatNumber(Long eventId, Integer heatNumber);
     boolean existsByEventIdAndHeatNumberAndIdNot(Long eventId, Integer heatNumber, Long id);
     boolean existsByEventIdAndStatusNot(Long eventId, HeatStatus excludedStatus);
-    Optional<CompetitionHeat> findFirstByEventIdOrderByHeatNumberDesc(Long eventId);
+    Optional<CompetitionHeat> findByEventIdAndHeatNumber(Long eventId, Integer heatNumber);
+    void deleteByEventIdAndStatus(Long eventId, HeatStatus status);
 }

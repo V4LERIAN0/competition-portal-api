@@ -32,8 +32,11 @@ public class HeatGenerationService {
     public List<HeatResponse> generateRandom(Long eventId, GenerateRandomHeatsRequest request) {
         CompetitionEvent event = heatService.findEvent(eventId);
         if (heatRepository.existsByEventIdAndStatusNot(eventId, HeatStatus.CANCELLED)) {
-            throw new ConflictException("This event already has active heats. Review or cancel them before generation.");
+            throw new ConflictException("This event already has heats. Review or delete them before generation.");
         }
+        // Cancelled rows created by an older version have no historical value and
+        // must not reserve heat names/numbers.
+        heatRepository.deleteByEventIdAndStatus(eventId, HeatStatus.CANCELLED);
         List<CompetitionAthlete> athletes = request.categoryId() == null
                 ? athleteRepository.findByCompetitionIdAndStatusNotInOrderByFullNameAsc(
                         event.getCompetition().getId(), List.of(AthleteStatus.WITHDRAWN, AthleteStatus.DISQUALIFIED))
@@ -45,11 +48,7 @@ public class HeatGenerationService {
 
         List<CompetitionAthlete> shuffled = new ArrayList<>(athletes);
         Collections.shuffle(shuffled, request.randomSeed() == null ? new Random() : new Random(request.randomSeed()));
-        int requestedStartingNumber = request.startingHeatNumber() == null ? 1 : request.startingHeatNumber();
-        int nextAvailableNumber = heatRepository.findFirstByEventIdOrderByHeatNumberDesc(eventId)
-                .map(heat -> heat.getHeatNumber() + 1)
-                .orElse(1);
-        int startingNumber = Math.max(requestedStartingNumber, nextAvailableNumber);
+        int startingNumber = request.startingHeatNumber() == null ? 1 : request.startingHeatNumber();
         int interval = request.minutesBetweenHeats() == null ? 10 : request.minutesBetweenHeats();
         List<CompetitionHeat> generated = new ArrayList<>();
 
@@ -64,9 +63,9 @@ public class HeatGenerationService {
                     .publicVisible(Boolean.TRUE.equals(request.publicVisible())).build();
             heat = heatRepository.save(heat);
             List<CompetitionAthlete> group = shuffled.subList(offset, Math.min(offset + request.capacity(), shuffled.size()));
-            for (int lane = 1; lane <= group.size(); lane++) {
+            for (int position = 1; position <= group.size(); position++) {
                 CompetitionHeatAthlete assignment = CompetitionHeatAthlete.builder()
-                        .heat(heat).athlete(group.get(lane - 1)).laneNumber(lane).stationNumber(lane)
+                        .heat(heat).athlete(group.get(position - 1)).positionNumber(position)
                         .checkInStatus(CheckInStatus.NOT_OPEN).build();
                 heat.getAssignments().add(assignment);
                 assignmentRepository.save(assignment);

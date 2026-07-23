@@ -30,10 +30,7 @@ public class CompetitionHeatAthlete extends BaseEntity {
     private CompetitionAthlete athlete;
 
     @Column(name = "lane_number", nullable = false)
-    private Integer laneNumber;
-
-    @Column(name = "station_number")
-    private Integer stationNumber;
+    private Integer positionNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "check_in_status", nullable = false, length = 30)

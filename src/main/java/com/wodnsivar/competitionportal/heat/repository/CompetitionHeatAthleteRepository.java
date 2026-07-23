@@ -9,9 +9,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface CompetitionHeatAthleteRepository extends JpaRepository<CompetitionHeatAthlete, Long> {
-    List<CompetitionHeatAthlete> findByHeatIdOrderByLaneNumberAsc(Long heatId);
-    boolean existsByHeatIdAndLaneNumber(Long heatId, Integer laneNumber);
-    boolean existsByHeatIdAndLaneNumberAndIdNot(Long heatId, Integer laneNumber, Long id);
+    List<CompetitionHeatAthlete> findByHeatIdOrderByPositionNumberAsc(Long heatId);
+    boolean existsByHeatIdAndPositionNumber(Long heatId, Integer positionNumber);
+    boolean existsByHeatIdAndPositionNumberAndIdNot(Long heatId, Integer positionNumber, Long id);
     @Query("select count(a) > 0 from CompetitionHeatAthlete a " +
             "where a.heat.event.id = :eventId and a.athlete.id = :athleteId " +
             "and a.heat.status <> :excludedStatus")

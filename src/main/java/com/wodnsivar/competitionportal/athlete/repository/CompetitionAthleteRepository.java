@@ -24,5 +24,10 @@ public interface CompetitionAthleteRepository extends JpaRepository<CompetitionA
 
     Optional<CompetitionAthlete> findByCompetitionIdAndBibNumber(Long competitionId, String bibNumber);
 
+    Optional<CompetitionAthlete> findByCompetitionIdAndUserAccountId(
+            Long competitionId,
+            Long userAccountId
+    );
+
     boolean existsByCompetitionIdAndBibNumber(Long competitionId, String bibNumber);
 }

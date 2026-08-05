@@ -4,6 +4,7 @@ public enum ScoreStatus {
     DRAFT,
     SUBMITTED,
     VALIDATED,
+    REJECTED,
     PUBLISHED,
     LOCKED
 }

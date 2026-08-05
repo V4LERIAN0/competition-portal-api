@@ -10,6 +10,9 @@ public interface CompetitionJudgeAssignmentRepository extends JpaRepository<Comp
  @Query("select a from CompetitionJudgeAssignment a where a.judge.userAccount.id=:userAccountId " +
         "order by a.heat.scheduledTime asc, a.heat.heatNumber asc")
  List<CompetitionJudgeAssignment> findForJudgeUser(@Param("userAccountId") Long userAccountId);
+ @Query("select a from CompetitionJudgeAssignment a where a.id=:assignmentId and a.judge.userAccount.id=:userAccountId")
+ Optional<CompetitionJudgeAssignment> findOwnedAssignment(@Param("assignmentId") Long assignmentId,
+                                                           @Param("userAccountId") Long userAccountId);
  boolean existsByHeatAssignmentId(Long heatAssignmentId);
  boolean existsByJudgeIdAndHeatId(Long judgeId,Long heatId);
 }

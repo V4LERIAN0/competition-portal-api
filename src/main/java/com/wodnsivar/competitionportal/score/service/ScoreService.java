@@ -85,7 +85,7 @@ public class ScoreService {
         CompetitionScore saved = scores.save(score);
         record(saved, created ? ScoreAuditAction.CREATED : ScoreAuditAction.UPDATED, actor,
                 previous, saved.getStatus(), null);
-        return response(saved);
+        return responseAfterFlush(saved);
     }
 
     @Transactional(readOnly = true)
@@ -121,7 +121,7 @@ public class ScoreService {
         CompetitionScore score = transitionEntity(id, ScoreStatus.REJECTED, ScoreAuditAction.REJECTED,
                 reason.trim(), List.of(ScoreStatus.DRAFT, ScoreStatus.SUBMITTED, ScoreStatus.VALIDATED));
         score.setRejectionReason(reason.trim());
-        return response(scores.save(score));
+        return responseAfterFlush(scores.save(score));
     }
 
     public ScoreResponse publish(Long id) {
@@ -129,7 +129,7 @@ public class ScoreService {
                 null, List.of(ScoreStatus.VALIDATED));
         score.setPublishedBy(currentUser());
         score.setPublishedAt(Instant.now());
-        return response(scores.save(score));
+        return responseAfterFlush(scores.save(score));
     }
 
     public ScoreResponse lock(Long id) {
@@ -137,7 +137,7 @@ public class ScoreService {
                 null, List.of(ScoreStatus.PUBLISHED));
         score.setLockedBy(currentUser());
         score.setLockedAt(Instant.now());
-        return response(scores.save(score));
+        return responseAfterFlush(scores.save(score));
     }
 
     public ScoreResponse unlock(Long id, String reason) {
@@ -145,7 +145,7 @@ public class ScoreService {
                 reason.trim(), List.of(ScoreStatus.LOCKED));
         score.setLockedBy(null);
         score.setLockedAt(null);
-        return response(scores.save(score));
+        return responseAfterFlush(scores.save(score));
     }
 
     public ScoreResponse reopen(Long id, String reason) {
@@ -157,7 +157,7 @@ public class ScoreService {
         score.setPublishedAt(null);
         score.setLockedBy(null);
         score.setLockedAt(null);
-        return response(scores.save(score));
+        return responseAfterFlush(scores.save(score));
     }
 
     @Transactional(readOnly = true)
@@ -171,7 +171,9 @@ public class ScoreService {
 
     private ScoreResponse transition(Long id, ScoreStatus next, ScoreAuditAction action, String reason,
                                      List<ScoreStatus> allowed) {
-        return response(scores.save(transitionEntity(id, next, action, reason, allowed)));
+        return responseAfterFlush(
+                scores.save(transitionEntity(id, next, action, reason, allowed))
+        );
     }
 
     private CompetitionScore transitionEntity(Long id, ScoreStatus next, ScoreAuditAction action,
@@ -223,23 +225,33 @@ public class ScoreService {
     private CompetitionEvent findEvent(Long id) {
         return events.findById(id).orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
     }
+
     private CompetitionAthlete findAthlete(Long id) {
         return athletes.findById(id).orElseThrow(() -> new ResourceNotFoundException("Athlete not found with id: " + id));
     }
+
     private CompetitionScore findScore(Long id) {
         return scores.findById(id).orElseThrow(() -> new ResourceNotFoundException("Score not found with id: " + id));
     }
+
     private UserAccount currentUser() {
         Long id = SecurityUtils.getCurrentUserIdOrThrow();
         return users.findById(id).orElseThrow(() -> new ForbiddenException("Authenticated user no longer exists."));
     }
+
     private void ensureSameCompetition(CompetitionEvent event, CompetitionAthlete athlete) {
         if (!event.getCompetition().getId().equals(athlete.getCompetition().getId())) {
             throw new BadRequestException("Event and athlete must belong to the same competition.");
         }
     }
+
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private ScoreResponse responseAfterFlush(CompetitionScore score) {
+        scores.flush();
+        return response(score);
     }
 
     private ScoreResponse response(CompetitionScore s) {

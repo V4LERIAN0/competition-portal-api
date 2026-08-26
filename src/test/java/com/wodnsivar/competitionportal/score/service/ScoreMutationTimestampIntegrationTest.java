@@ -1,5 +1,4 @@
 package com.wodnsivar.competitionportal.score.service;
-
 import com.wodnsivar.competitionportal.athlete.entity.CompetitionAthlete;
 import com.wodnsivar.competitionportal.athlete.repository.CompetitionAthleteRepository;
 import com.wodnsivar.competitionportal.auth.security.UserPrincipal;
@@ -25,9 +24,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.Duration;
-
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -120,6 +120,86 @@ class LeaderboardRankingTest {
                 .containsExactly("Carlos Mendoza:1:1", "Diego Hernández:2:2");
     }
 
+    @Test
+    void mirroredPlacementsRemainTiedInTheOverallLeaderboard() {
+        TestData data = maxWeightData(
+                new BigDecimal("300"),
+                new BigDecimal("250")
+        );
+
+        CompetitionEvent secondEvent = CompetitionEvent.builder()
+                .id(4L)
+                .competition(data.competition())
+                .eventCode("3")
+                .name("Second Max Lift")
+                .scoreType(ScoreType.MAX_WEIGHT)
+                .rankingDirection(RankingDirection.HIGHER_IS_BETTER)
+                .weightUnit(WeightUnit.POUNDS)
+                .tiebreakType(TiebreakType.NONE)
+                .displayOrder(4)
+                .build();
+
+        CompetitionRepository competitionRepository = mock(CompetitionRepository.class);
+        CompetitionEventRepository eventRepository = mock(CompetitionEventRepository.class);
+        CompetitionCategoryRepository categoryRepository = mock(CompetitionCategoryRepository.class);
+        CompetitionAthleteRepository athleteRepository = mock(CompetitionAthleteRepository.class);
+        CompetitionScoreRepository scoreRepository = mock(CompetitionScoreRepository.class);
+
+        when(competitionRepository.findById(1L))
+                .thenReturn(Optional.of(data.competition()));
+        when(eventRepository.findByCompetitionIdOrderByDisplayOrderAscEventCodeAsc(1L))
+                .thenReturn(List.of(data.event(), secondEvent));
+        when(categoryRepository.findByCompetitionIdOrderByDisplayOrderAscNameAsc(1L))
+                .thenReturn(List.of(data.category()));
+        when(athleteRepository.findByCompetitionIdAndStatusNotInOrderByFullNameAsc(
+                org.mockito.ArgumentMatchers.eq(1L), anyCollection()))
+                .thenReturn(List.of(data.carlos(), data.diego()));
+        when(scoreRepository.findByEventCompetitionIdAndStatusIn(
+                org.mockito.ArgumentMatchers.eq(1L), anyCollection()))
+                .thenReturn(List.of(
+                        data.carlosScore(),
+                        data.diegoScore(),
+                        score(8L, secondEvent, data.carlos(), new BigDecimal("250")),
+                        score(9L, secondEvent, data.diego(), new BigDecimal("300"))
+                ));
+
+        OverallLeaderboardService service = new OverallLeaderboardService(
+                competitionRepository,
+                eventRepository,
+                categoryRepository,
+                athleteRepository,
+                scoreRepository,
+                eventRankingService()
+        );
+
+        List<String> ranking = service.getAdminPreview(1L)
+                .categories().get(0).rows().stream()
+                .map(row -> row.athleteName() + ":" + row.rank() + ":" + row.tied())
+                .toList();
+
+        assertThat(ranking).containsExactly(
+                "Carlos Mendoza:1:true",
+                "Diego Hernández:1:true"
+        );
+    }
+    @Test
+    void comparesSortedPlacementProfilesLexicographically() {
+        assertThat(OverallLeaderboardService.compareSortedPlacements(
+                List.of(2, 4, 5),
+                List.of(3, 3, 5)
+        )).isNegative();
+
+        assertThat(OverallLeaderboardService.compareSortedPlacements(
+                List.of(3, 3, 5),
+                List.of(2, 4, 5)
+        )).isPositive();
+
+        assertThat(OverallLeaderboardService.compareSortedPlacements(
+                List.of(1, 2),
+                List.of(1, 2)
+        )).isZero();
+    }
+
     private EventRankingService eventRankingService() {
         return new EventRankingService(null, null, null, null, null, tieBreakService);
     }

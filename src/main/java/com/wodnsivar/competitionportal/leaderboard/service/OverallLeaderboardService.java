@@ -337,25 +337,65 @@ public class OverallLeaderboardService {
     }
 
     private int compareCompetitive(OverallCandidate left, OverallCandidate right) {
-        int comparison = Integer.compare(right.scoredEvents(), left.scoredEvents());
+        int comparison = Integer.compare(
+                right.scoredEvents(),
+                left.scoredEvents()
+        );
         if (comparison != 0) {
             return comparison;
         }
+
         comparison = Comparator.nullsLast(Integer::compareTo)
                 .compare(left.totalPoints(), right.totalPoints());
         if (comparison != 0) {
             return comparison;
         }
-        comparison = Integer.compare(right.eventWins(), left.eventWins());
-        if (comparison != 0) {
-            return comparison;
+
+        return comparePlacementsBestToWorst(left, right);
+    }
+
+    private int comparePlacementsBestToWorst(
+            OverallCandidate left,
+            OverallCandidate right
+    ) {
+        return compareSortedPlacements(
+                placementsBestToWorst(left),
+                placementsBestToWorst(right)
+        );
+    }
+
+    static int compareSortedPlacements(
+            List<Integer> leftPlacements,
+            List<Integer> rightPlacements
+    ) {
+        int sharedPlacements = Math.min(
+                leftPlacements.size(),
+                rightPlacements.size()
+        );
+
+        for (int index = 0; index < sharedPlacements; index++) {
+            int comparison = Integer.compare(
+                    leftPlacements.get(index),
+                    rightPlacements.get(index)
+            );
+
+            if (comparison != 0) {
+                return comparison;
+            }
         }
-        comparison = Integer.compare(right.topThreePlacements(), left.topThreePlacements());
-        if (comparison != 0) {
-            return comparison;
-        }
-        return Comparator.nullsLast(Integer::compareTo)
-                .compare(left.mostRecentEventPlacement(), right.mostRecentEventPlacement());
+
+        return Integer.compare(
+                rightPlacements.size(),
+                leftPlacements.size()
+        );
+    }
+
+    private List<Integer> placementsBestToWorst(OverallCandidate candidate) {
+        return candidate.eventResults().stream()
+                .map(EventLeaderboardRow::rank)
+                .filter(rank -> rank != null)
+                .sorted()
+                .toList();
     }
 
     private int compareCandidateNames(OverallCandidate left, OverallCandidate right) {

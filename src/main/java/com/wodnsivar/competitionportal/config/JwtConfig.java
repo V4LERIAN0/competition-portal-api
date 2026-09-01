@@ -16,4 +16,10 @@ public class JwtConfig {
 
     @Value("${app.jwt.cookie-name}")
     private String cookieName;
+
+    @Value("${app.jwt.cookie-secure:false}")
+    private boolean cookieSecure;
+
+    @Value("${app.jwt.cookie-same-site:Lax}")
+    private String cookieSameSite;
 }

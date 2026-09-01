@@ -40,12 +40,41 @@ public class JudgeAssignmentService {
    return response(a);
   }).toList();
  }
- private JudgeAssignmentResponse response(CompetitionJudgeAssignment a){
-  CompetitionJudge j=a.getJudge();CompetitionHeatAthlete p=a.getHeatAssignment();CompetitionHeat h=a.getHeat();
-  return new JudgeAssignmentResponse(a.getId(),j.getId(),j.getFullName(),j.getEmail(),j.getActive(),
-   h.getCompetition().getId(),h.getEvent().getId(),h.getEvent().getEventCode(),h.getEvent().getName(),
-   h.getId(),h.getName(),h.getHeatNumber(),h.getScheduledTime(),p.getId(),p.getAthlete().getId(),
-   p.getAthlete().getFullName(),p.getAthlete().getBibNumber(),p.getAthlete().getCategory().getId(),
-   p.getAthlete().getCategory().getName(),p.getPositionNumber());
+ private JudgeAssignmentResponse response(CompetitionJudgeAssignment assignment) {
+  CompetitionJudge judge = assignment.getJudge();
+  CompetitionHeatAthlete position = assignment.getHeatAssignment();
+  CompetitionHeat heat = assignment.getHeat();
+  var event = heat.getEvent();
+
+  return new JudgeAssignmentResponse(
+          assignment.getId(),
+          judge.getId(),
+          judge.getFullName(),
+          judge.getEmail(),
+          judge.getActive(),
+          heat.getCompetition().getId(),
+          event.getId(),
+          event.getEventCode(),
+          event.getName(),
+          event.getScoreType(),
+          event.getTimeCapSeconds(),
+          event.getCappedScoringEnabled(),
+          event.getWeightUnit(),
+          event.getTiebreakType(),
+          event.getTiebreakLabel(),
+          event.getTiebreakRequired(),
+          event.getTiebreakWeightUnit(),
+          heat.getId(),
+          heat.getName(),
+          heat.getHeatNumber(),
+          heat.getScheduledTime(),
+          position.getId(),
+          position.getAthlete().getId(),
+          position.getAthlete().getFullName(),
+          position.getAthlete().getBibNumber(),
+          position.getAthlete().getCategory().getId(),
+          position.getAthlete().getCategory().getName(),
+          position.getPositionNumber()
+  );
  }
 }

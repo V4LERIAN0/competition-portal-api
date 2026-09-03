@@ -8,6 +8,7 @@ import com.wodnsivar.competitionportal.enums.AthleteStatus;
 import com.wodnsivar.competitionportal.enums.CheckInStatus;
 import com.wodnsivar.competitionportal.enums.HeatStatus;
 import com.wodnsivar.competitionportal.event.entity.CompetitionEvent;
+import com.wodnsivar.competitionportal.event.service.EventEligibilityService;
 import com.wodnsivar.competitionportal.heat.dto.GenerateRandomHeatsRequest;
 import com.wodnsivar.competitionportal.heat.dto.HeatResponse;
 import com.wodnsivar.competitionportal.heat.entity.CompetitionHeat;
@@ -28,6 +29,7 @@ public class HeatGenerationService {
     private final CompetitionHeatRepository heatRepository;
     private final CompetitionHeatAthleteRepository assignmentRepository;
     private final CompetitionAthleteRepository athleteRepository;
+    private final EventEligibilityService eventEligibility;
 
     public List<HeatResponse> generateRandom(Long eventId, GenerateRandomHeatsRequest request) {
         CompetitionEvent event = heatService.findEvent(eventId);
@@ -44,6 +46,11 @@ public class HeatGenerationService {
                         event.getCompetition().getId(), request.categoryId()).stream()
                         .filter(a -> a.getStatus() != AthleteStatus.WITHDRAWN && a.getStatus() != AthleteStatus.DISQUALIFIED)
                         .toList();
+        Set<Long> explicitlyEligibleAthleteIds = eventEligibility.explicitlyEligibleAthleteIds(event);
+        athletes = athletes.stream()
+                .filter(athlete -> explicitlyEligibleAthleteIds == null
+                        || explicitlyEligibleAthleteIds.contains(athlete.getId()))
+                .toList();
         if (athletes.isEmpty()) throw new BadRequestException("No eligible athletes were found for heat generation.");
 
         List<CompetitionAthlete> shuffled = new ArrayList<>(athletes);

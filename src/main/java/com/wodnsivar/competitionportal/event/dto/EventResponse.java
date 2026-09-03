@@ -1,12 +1,14 @@
 package com.wodnsivar.competitionportal.event.dto;
 
 import com.wodnsivar.competitionportal.enums.EventStatus;
+import com.wodnsivar.competitionportal.enums.EventEligibilityMode;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
 import com.wodnsivar.competitionportal.enums.TiebreakType;
 import com.wodnsivar.competitionportal.enums.WeightUnit;
 
 import java.time.Instant;
+import java.util.List;
 
 public record EventResponse(
         Long id,
@@ -34,6 +36,10 @@ public record EventResponse(
         Boolean publicVisible,
         Boolean scoreVisible,
         EventStatus status,
+        EventEligibilityMode eligibilityMode,
+        List<Long> eligibleAthleteIds,
+        List<EventCategoryConfigResponse> categoryConfigurations,
+        List<EventVariationPublicResponse> variations,
         Instant createdAt,
         Instant updatedAt
 ) {

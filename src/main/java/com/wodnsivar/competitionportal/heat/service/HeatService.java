@@ -13,6 +13,7 @@ import com.wodnsivar.competitionportal.enums.HeatStatus;
 import com.wodnsivar.competitionportal.enums.VisibilityStatus;
 import com.wodnsivar.competitionportal.event.entity.CompetitionEvent;
 import com.wodnsivar.competitionportal.event.repository.CompetitionEventRepository;
+import com.wodnsivar.competitionportal.event.service.EventEligibilityService;
 import com.wodnsivar.competitionportal.heat.dto.*;
 import com.wodnsivar.competitionportal.heat.entity.CompetitionHeat;
 import com.wodnsivar.competitionportal.heat.entity.CompetitionHeatAthlete;
@@ -33,6 +34,7 @@ public class HeatService {
     private final CompetitionEventRepository eventRepository;
     private final CompetitionAthleteRepository athleteRepository;
     private final CompetitionRepository competitionRepository;
+    private final EventEligibilityService eventEligibility;
 
     public HeatResponse createHeat(Long eventId, HeatCreateRequest request) {
         CompetitionEvent event = findEvent(eventId);
@@ -172,6 +174,7 @@ public class HeatService {
         if (!athlete.getCompetition().getId().equals(heat.getCompetition().getId())) {
             throw new BadRequestException("The athlete and heat must belong to the same competition.");
         }
+        eventEligibility.requireEligible(heat.getEvent(), athlete);
         boolean alreadyAssigned = assignmentRepository.existsForEventAndAthleteExcludingHeatStatus(
                 heat.getEvent().getId(), athlete.getId(), HeatStatus.CANCELLED);
         if (alreadyAssigned) {

@@ -156,3 +156,9 @@ Before production, the intended direction is to introduce versioned migrations, 
 ## Product direction
 
 The backend is the source of truth for competition rules. Official score normalization, ranking, placement points, tie-breaking, heat generation, check-in rules, publishing, and locking belong here rather than in the frontend.
+
+An event may define category-specific public instructions, time caps, total reps,
+reps per round, and capped-scoring behavior. When no category configuration is
+present, scoring and public responses fall back to the event defaults. Events
+may also restrict eligibility to an explicit athlete list for finals and other
+qualified-only workouts.

@@ -3,6 +3,8 @@ package com.wodnsivar.competitionportal.score.repository;
 import com.wodnsivar.competitionportal.score.entity.CompetitionScore;
 import com.wodnsivar.competitionportal.enums.ScoreStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,4 +18,7 @@ public interface CompetitionScoreRepository extends JpaRepository<CompetitionSco
             Long competitionId,
             Collection<ScoreStatus> statuses
     );
+
+    @Query("select score.athlete.id from CompetitionScore score where score.event.id = :eventId")
+    List<Long> findAthleteIdsByEventId(@Param("eventId") Long eventId);
 }

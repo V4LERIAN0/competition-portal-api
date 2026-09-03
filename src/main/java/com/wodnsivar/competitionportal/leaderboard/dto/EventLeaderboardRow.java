@@ -11,6 +11,7 @@ public record EventLeaderboardRow(
         Integer rank,
         Integer placementPoints,
         Boolean tied,
+        Long eventId,
         Long athleteId,
         String athleteName,
         String bibNumber,

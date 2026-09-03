@@ -8,6 +8,8 @@ import com.wodnsivar.competitionportal.common.exception.*;
 import com.wodnsivar.competitionportal.enums.*;
 import com.wodnsivar.competitionportal.event.entity.CompetitionEvent;
 import com.wodnsivar.competitionportal.event.repository.CompetitionEventRepository;
+import com.wodnsivar.competitionportal.event.service.EventConfigurationResolver;
+import com.wodnsivar.competitionportal.event.service.EventEligibilityService;
 import com.wodnsivar.competitionportal.judge.entity.CompetitionJudgeAssignment;
 import com.wodnsivar.competitionportal.judge.repository.CompetitionJudgeAssignmentRepository;
 import com.wodnsivar.competitionportal.score.dto.*;
@@ -33,6 +35,8 @@ public class ScoreService {
     private final CompetitionJudgeAssignmentRepository judgeAssignments;
     private final UserAccountRepository users;
     private final ScoreValidationService validation;
+    private final EventConfigurationResolver eventConfigurations;
+    private final EventEligibilityService eventEligibility;
 
     public ScoreResponse adminUpsert(Long eventId, Long athleteId, ScoreEntryRequest request) {
         CompetitionEvent event = findEvent(eventId);
@@ -54,7 +58,8 @@ public class ScoreService {
 
     private ScoreResponse upsert(CompetitionEvent event, CompetitionAthlete athlete,
                                  ScoreEntryRequest request, boolean judgeEntry) {
-        validation.validate(event, request);
+        eventEligibility.requireEligible(event, athlete);
+        validation.validate(event, eventConfigurations.resolve(event, athlete.getCategory()), request);
         UserAccount actor = currentUser();
         CompetitionScore score = scores.findByEventIdAndAthleteId(event.getId(), athlete.getId()).orElse(null);
         ScoreStatus previous = score == null ? null : score.getStatus();

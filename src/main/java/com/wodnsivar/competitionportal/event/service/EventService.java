@@ -6,6 +6,7 @@ import com.wodnsivar.competitionportal.competition.entity.Competition;
 import com.wodnsivar.competitionportal.competition.repository.CompetitionRepository;
 import com.wodnsivar.competitionportal.enums.CompetitionStatus;
 import com.wodnsivar.competitionportal.enums.EventStatus;
+import com.wodnsivar.competitionportal.enums.EventEligibilityMode;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
 import com.wodnsivar.competitionportal.enums.VisibilityStatus;
@@ -30,6 +31,8 @@ public class EventService {
 
     private final CompetitionEventRepository eventRepository;
     private final CompetitionRepository competitionRepository;
+    private final EventCategoryConfigurationService categoryConfigurations;
+    private final EventEligibilityService eligibility;
 
     public EventResponse createEvent(Long competitionId, EventCreateRequest request) {
         Competition competition = findCompetitionOrThrow(competitionId);
@@ -65,6 +68,7 @@ public class EventService {
                 .tiebreakRankingDirection(tiebreakType == TiebreakType.NONE ? null : request.tiebreakRankingDirection())
                 .tiebreakWeightUnit(tiebreakType == TiebreakType.WEIGHT ? request.tiebreakWeightUnit() : null)
                 .tiebreakRequired(tiebreakType != TiebreakType.NONE && defaultIfNull(request.tiebreakRequired(), false))
+                .eligibilityMode(defaultIfNull(request.eligibilityMode(), EventEligibilityMode.ALL_ACTIVE))
                 .displayOrder(defaultIfNull(request.displayOrder(), 0))
                 .publicVisible(defaultIfNull(request.publicVisible(), false))
                 .scoreVisible(defaultIfNull(request.scoreVisible(), false))
@@ -72,6 +76,8 @@ public class EventService {
                 .build();
 
         CompetitionEvent savedEvent = eventRepository.save(event);
+        categoryConfigurations.replace(savedEvent, request.categoryConfigurations());
+        eligibility.replaceParticipants(savedEvent, request.eligibleAthleteIds());
 
         return toResponse(savedEvent);
     }
@@ -94,6 +100,9 @@ public class EventService {
 
     public EventResponse updateEvent(Long eventId, EventUpdateRequest request) {
         CompetitionEvent event = findEventOrThrow(eventId);
+        EventEligibilityMode previousEligibilityMode = event.getEligibilityMode() == null
+                ? EventEligibilityMode.ALL_ACTIVE
+                : event.getEligibilityMode();
 
         String normalizedEventCode = normalizeEventCode(request.eventCode());
         Long competitionId = event.getCompetition().getId();
@@ -125,12 +134,22 @@ public class EventService {
         event.setTiebreakRankingDirection(tiebreakType == TiebreakType.NONE ? null : request.tiebreakRankingDirection());
         event.setTiebreakWeightUnit(tiebreakType == TiebreakType.WEIGHT ? request.tiebreakWeightUnit() : null);
         event.setTiebreakRequired(tiebreakType != TiebreakType.NONE && defaultIfNull(request.tiebreakRequired(), false));
+        EventEligibilityMode desiredEligibilityMode = defaultIfNull(
+                request.eligibilityMode(), previousEligibilityMode);
+        event.setEligibilityMode(desiredEligibilityMode);
         event.setDisplayOrder(defaultIfNull(request.displayOrder(), event.getDisplayOrder()));
         event.setPublicVisible(defaultIfNull(request.publicVisible(), event.getPublicVisible()));
         event.setScoreVisible(defaultIfNull(request.scoreVisible(), event.getScoreVisible()));
         event.setStatus(defaultIfNull(request.status(), event.getStatus()));
 
         CompetitionEvent savedEvent = eventRepository.save(event);
+        categoryConfigurations.replace(savedEvent, request.categoryConfigurations());
+        if (desiredEligibilityMode == EventEligibilityMode.ALL_ACTIVE) {
+            eligibility.replaceParticipants(savedEvent, List.of());
+        } else if (request.eligibleAthleteIds() != null
+                || previousEligibilityMode != EventEligibilityMode.EXPLICIT) {
+            eligibility.replaceParticipants(savedEvent, request.eligibleAthleteIds());
+        }
 
         return toResponse(savedEvent);
     }
@@ -348,6 +367,10 @@ public class EventService {
                 event.getPublicVisible(),
                 event.getScoreVisible(),
                 event.getStatus(),
+                event.getEligibilityMode() == null ? EventEligibilityMode.ALL_ACTIVE : event.getEligibilityMode(),
+                eligibility.participantIds(event),
+                categoryConfigurations.adminResponses(event),
+                categoryConfigurations.publicResponses(event),
                 event.getCreatedAt(),
                 event.getUpdatedAt()
         );
@@ -377,7 +400,9 @@ public class EventService {
                 event.getTiebreakRequired(),
                 event.getDisplayOrder(),
                 event.getScoreVisible(),
-                event.getStatus()
+                event.getStatus(),
+                event.getEligibilityMode() == null ? EventEligibilityMode.ALL_ACTIVE : event.getEligibilityMode(),
+                categoryConfigurations.publicResponses(event)
         );
     }
 }

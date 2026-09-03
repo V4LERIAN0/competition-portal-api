@@ -19,4 +19,10 @@ public interface CompetitionHeatAthleteRepository extends JpaRepository<Competit
             @Param("eventId") Long eventId,
             @Param("athleteId") Long athleteId,
             @Param("excludedStatus") HeatStatus excludedStatus);
+
+    @Query("select a.athlete.id from CompetitionHeatAthlete a " +
+            "where a.heat.event.id = :eventId and a.heat.status <> :excludedStatus")
+    List<Long> findAthleteIdsForEventExcludingHeatStatus(
+            @Param("eventId") Long eventId,
+            @Param("excludedStatus") HeatStatus excludedStatus);
 }

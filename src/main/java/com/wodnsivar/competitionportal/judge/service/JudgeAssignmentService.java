@@ -6,6 +6,7 @@ import com.wodnsivar.competitionportal.heat.repository.*;
 import com.wodnsivar.competitionportal.judge.dto.*;
 import com.wodnsivar.competitionportal.judge.entity.*;
 import com.wodnsivar.competitionportal.judge.repository.CompetitionJudgeAssignmentRepository;
+import com.wodnsivar.competitionportal.event.service.EventConfigurationResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ public class JudgeAssignmentService {
  private final CompetitionHeatAthleteRepository positions;
  private final CompetitionHeatRepository heats;
  private final JudgeService judges;
+ private final EventConfigurationResolver eventConfigurations;
  public JudgeAssignmentResponse assign(Long positionId,JudgeAssignmentRequest r){
   CompetitionHeatAthlete p=positions.findById(positionId).orElseThrow(()->new ResourceNotFoundException("Heat assignment not found with id: "+positionId));
   CompetitionJudge j=judges.find(r.judgeId());CompetitionHeat h=p.getHeat();
@@ -45,6 +47,8 @@ public class JudgeAssignmentService {
   CompetitionHeatAthlete position = assignment.getHeatAssignment();
   CompetitionHeat heat = assignment.getHeat();
   var event = heat.getEvent();
+  var effectiveConfiguration = eventConfigurations.resolve(
+          event, position.getAthlete().getCategory());
 
   return new JudgeAssignmentResponse(
           assignment.getId(),
@@ -57,8 +61,8 @@ public class JudgeAssignmentService {
           event.getEventCode(),
           event.getName(),
           event.getScoreType(),
-          event.getTimeCapSeconds(),
-          event.getCappedScoringEnabled(),
+          effectiveConfiguration.timeCapSeconds(),
+          effectiveConfiguration.cappedScoringEnabled(),
           event.getWeightUnit(),
           event.getTiebreakType(),
           event.getTiebreakLabel(),

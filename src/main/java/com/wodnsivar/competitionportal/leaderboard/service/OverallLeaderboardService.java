@@ -203,7 +203,7 @@ public class OverallLeaderboardService {
                 .map(athlete -> candidateFor(athlete, events, eventRowsByAthlete))
                 .toList();
 
-        List<OverallLeaderboardRow> rankedRows = rankOverallCandidates(candidates, events.size());
+        List<OverallLeaderboardRow> rankedRows = rankOverallCandidates(candidates);
         return new OverallLeaderboardResponse.CategoryLeaderboard(
                 category.getId(),
                 category.getName(),
@@ -223,6 +223,9 @@ public class OverallLeaderboardService {
                 .map(event -> eventRowsByAthlete.getOrDefault(event.getId(), Map.of()).get(athlete.getId()))
                 .filter(result -> result != null)
                 .toList();
+        int totalEligibleEvents = (int) eventRowsByAthlete.values().stream()
+                .filter(rowsByAthlete -> rowsByAthlete.containsKey(athlete.getId()))
+                .count();
 
         List<EventLeaderboardRow> scoredResults = eventResults.stream()
                 .filter(result -> result.placementPoints() != null)
@@ -248,14 +251,12 @@ public class OverallLeaderboardService {
                 eventWins,
                 topThreePlacements,
                 mostRecentEventPlacement,
+                totalEligibleEvents,
                 eventResults
         );
     }
 
-    private List<OverallLeaderboardRow> rankOverallCandidates(
-            List<OverallCandidate> candidates,
-            int totalEvents
-    ) {
+    private List<OverallLeaderboardRow> rankOverallCandidates(List<OverallCandidate> candidates) {
         List<OverallCandidate> scoredCandidates = candidates.stream()
                 .filter(candidate -> candidate.scoredEvents() > 0)
                 .sorted(overallOrder())
@@ -286,11 +287,11 @@ public class OverallLeaderboardService {
                     candidate,
                     rank,
                     rankFrequency.getOrDefault(rank, 0) > 1,
-                    totalEvents
+                    candidate.totalEligibleEvents()
             ));
         }
         for (OverallCandidate candidate : unscoredCandidates) {
-            rows.add(toOverallRow(candidate, null, false, totalEvents));
+            rows.add(toOverallRow(candidate, null, false, candidate.totalEligibleEvents()));
         }
         return List.copyOf(rows);
     }
@@ -453,6 +454,7 @@ public class OverallLeaderboardService {
             int eventWins,
             int topThreePlacements,
             Integer mostRecentEventPlacement,
+            int totalEligibleEvents,
             List<EventLeaderboardRow> eventResults
     ) {
     }

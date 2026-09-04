@@ -1,10 +1,13 @@
 package com.wodnsivar.competitionportal.event.dto;
 
 import com.wodnsivar.competitionportal.enums.EventStatus;
+import com.wodnsivar.competitionportal.enums.EventEligibilityMode;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
 import com.wodnsivar.competitionportal.enums.TiebreakType;
 import com.wodnsivar.competitionportal.enums.WeightUnit;
+
+import java.util.List;
 
 public record EventPublicResponse(
         Long id,
@@ -29,6 +32,8 @@ public record EventPublicResponse(
         Boolean tiebreakRequired,
         Integer displayOrder,
         Boolean scoreVisible,
-        EventStatus status
+        EventStatus status,
+        EventEligibilityMode eligibilityMode,
+        List<EventVariationPublicResponse> variations
 ) {
 }

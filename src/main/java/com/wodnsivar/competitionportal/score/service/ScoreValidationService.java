@@ -4,6 +4,7 @@ import com.wodnsivar.competitionportal.common.exception.BadRequestException;
 import com.wodnsivar.competitionportal.enums.ScoreType;
 import com.wodnsivar.competitionportal.enums.TiebreakType;
 import com.wodnsivar.competitionportal.event.entity.CompetitionEvent;
+import com.wodnsivar.competitionportal.event.service.EffectiveEventConfiguration;
 import com.wodnsivar.competitionportal.score.dto.ScoreEntryRequest;
 import org.springframework.stereotype.Service;
 
@@ -12,10 +13,23 @@ import java.math.BigDecimal;
 @Service
 public class ScoreValidationService {
     public void validate(CompetitionEvent event, ScoreEntryRequest request) {
+        validate(event, new EffectiveEventConfiguration(
+                event.getTimeCapSeconds(),
+                event.getTotalReps(),
+                event.getRepsPerRound(),
+                event.getCappedScoringEnabled()
+        ), request);
+    }
+
+    public void validate(
+            CompetitionEvent event,
+            EffectiveEventConfiguration configuration,
+            ScoreEntryRequest request
+    ) {
         requireOnlyConfiguredPrimaryValue(event.getScoreType(), request);
 
         switch (event.getScoreType()) {
-            case FOR_TIME -> validateForTime(event, request);
+            case FOR_TIME -> validateForTime(configuration, request);
             case AMRAP_REPS, EMOM_REPS, ROUNDS_COMPLETED -> require(request.reps(), "Reps are required.");
             case MAX_WEIGHT -> require(request.weightValue(), "Weight is required.");
             case POINTS -> require(request.pointsValue(), "Points are required.");
@@ -46,9 +60,9 @@ public class ScoreValidationService {
                 );
             }
 
-            if (event.getTimeCapSeconds() != null
+            if (configuration.timeCapSeconds() != null
                     && request.tiebreakValue().compareTo(
-                    BigDecimal.valueOf(event.getTimeCapSeconds())
+                    BigDecimal.valueOf(configuration.timeCapSeconds())
             ) > 0) {
                 throw new BadRequestException(
                         "Tiebreak time cannot exceed the event time cap."
@@ -57,21 +71,22 @@ public class ScoreValidationService {
         }
     }
 
-    private void validateForTime(CompetitionEvent event, ScoreEntryRequest request) {
+    private void validateForTime(EffectiveEventConfiguration configuration, ScoreEntryRequest request) {
         if (request.completed() == null) {
             throw new BadRequestException("FOR_TIME scores must indicate whether the athlete completed the workout.");
         }
         if (Boolean.TRUE.equals(request.completed())) {
             require(request.scoreSeconds(), "Completion time is required.");
-            if (event.getTimeCapSeconds() != null && request.scoreSeconds() > event.getTimeCapSeconds()) {
+            if (configuration.timeCapSeconds() != null
+                    && request.scoreSeconds() > configuration.timeCapSeconds()) {
                 throw new BadRequestException("Completion time cannot exceed the event time cap.");
             }
         } else {
-            if (!Boolean.TRUE.equals(event.getCappedScoringEnabled())) {
+            if (!Boolean.TRUE.equals(configuration.cappedScoringEnabled())) {
                 throw new BadRequestException("Incomplete/DNF rep scoring is not enabled for this event.");
             }
             require(request.reps(), "Completed reps are required for an incomplete/DNF score.");
-            if (event.getTotalReps() != null && request.reps() >= event.getTotalReps()) {
+            if (configuration.totalReps() != null && request.reps() >= configuration.totalReps()) {
                 throw new BadRequestException("An incomplete score must have fewer reps than the event total.");
             }
         }

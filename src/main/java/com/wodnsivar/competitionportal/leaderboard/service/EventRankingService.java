@@ -18,6 +18,9 @@ import com.wodnsivar.competitionportal.enums.VisibilityStatus;
 import com.wodnsivar.competitionportal.enums.WeightUnit;
 import com.wodnsivar.competitionportal.event.entity.CompetitionEvent;
 import com.wodnsivar.competitionportal.event.repository.CompetitionEventRepository;
+import com.wodnsivar.competitionportal.event.service.EffectiveEventConfiguration;
+import com.wodnsivar.competitionportal.event.service.EventConfigurationResolver;
+import com.wodnsivar.competitionportal.event.service.EventEligibilityService;
 import com.wodnsivar.competitionportal.leaderboard.dto.EventLeaderboardResponse;
 import com.wodnsivar.competitionportal.leaderboard.dto.EventLeaderboardRow;
 import com.wodnsivar.competitionportal.score.entity.CompetitionScore;
@@ -64,6 +67,8 @@ public class EventRankingService {
     private final CompetitionAthleteRepository athleteRepository;
     private final CompetitionScoreRepository scoreRepository;
     private final TieBreakService tieBreakService;
+    private final EventConfigurationResolver eventConfigurations;
+    private final EventEligibilityService eventEligibility;
 
     public EventLeaderboardResponse getAdminPreview(Long competitionId, Long eventId) {
         Competition competition = findCompetition(competitionId);
@@ -101,8 +106,11 @@ public class EventRankingService {
             List<CompetitionAthlete> competitionAthletes,
             List<CompetitionScore> availableScores
     ) {
+        Set<Long> explicitlyEligibleAthleteIds = eventEligibility.explicitlyEligibleAthleteIds(event);
         List<CompetitionAthlete> categoryAthletes = competitionAthletes.stream()
                 .filter(this::isEligible)
+                .filter(athlete -> explicitlyEligibleAthleteIds == null
+                        || explicitlyEligibleAthleteIds.contains(athlete.getId()))
                 .filter(athlete -> category.getId().equals(athlete.getCategory().getId()))
                 .sorted(athleteNameOrder())
                 .toList();
@@ -216,6 +224,7 @@ public class EventRankingService {
                 rank,
                 placementPoints,
                 tied,
+                event.getId(),
                 athlete.getId(),
                 athlete.getFullName(),
                 athlete.getBibNumber(),
@@ -226,7 +235,7 @@ public class EventRankingService {
                 score == null ? null : score.getId(),
                 score == null ? null : score.getStatus(),
                 event.getScoreType(),
-                displayScore(event, score),
+                displayScore(event, athlete, score),
                 score == null ? null : score.getCompleted(),
                 score == null ? null : score.getScoreSeconds(),
                 score == null ? null : score.getReps(),
@@ -265,16 +274,23 @@ public class EventRankingService {
         };
     }
 
-    private String displayScore(CompetitionEvent event, CompetitionScore score) {
+    private String displayScore(
+            CompetitionEvent event,
+            CompetitionAthlete athlete,
+            CompetitionScore score
+    ) {
         if (score == null) {
             return "No score";
         }
+
+        EffectiveEventConfiguration configuration = eventConfigurations.resolve(
+                event, athlete.getCategory());
 
         return switch (event.getScoreType()) {
             case FOR_TIME -> Boolean.TRUE.equals(score.getCompleted())
                     ? formatSeconds(score.getScoreSeconds())
                     : "CAP + " + score.getReps() + " reps";
-            case AMRAP_REPS -> formatAmrap(score.getReps(), event.getRepsPerRound());
+            case AMRAP_REPS -> formatAmrap(score.getReps(), configuration.repsPerRound());
             case MAX_WEIGHT -> decimalText(score.getWeightValue()) + " " + weightLabel(event.getWeightUnit());
             case EMOM_REPS -> score.getReps() + " reps";
             case ROUNDS_COMPLETED -> score.getReps() + " rounds";

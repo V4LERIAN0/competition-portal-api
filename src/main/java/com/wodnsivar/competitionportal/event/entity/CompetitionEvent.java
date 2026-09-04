@@ -3,6 +3,7 @@ package com.wodnsivar.competitionportal.event.entity;
 import com.wodnsivar.competitionportal.common.audit.BaseEntity;
 import com.wodnsivar.competitionportal.competition.entity.Competition;
 import com.wodnsivar.competitionportal.enums.EventStatus;
+import com.wodnsivar.competitionportal.enums.EventEligibilityMode;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
 import com.wodnsivar.competitionportal.enums.TiebreakType;
@@ -109,6 +110,11 @@ public class CompetitionEvent extends BaseEntity {
 
     @Column(name = "tiebreak_required", nullable = false, columnDefinition = "boolean default false")
     private Boolean tiebreakRequired;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "eligibility_mode", nullable = false, length = 30, columnDefinition = "varchar(30) default 'ALL_ACTIVE'")
+    private EventEligibilityMode eligibilityMode = EventEligibilityMode.ALL_ACTIVE;
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;

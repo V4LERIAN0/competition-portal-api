@@ -15,6 +15,9 @@ import com.wodnsivar.competitionportal.enums.TiebreakType;
 import com.wodnsivar.competitionportal.enums.WeightUnit;
 import com.wodnsivar.competitionportal.event.entity.CompetitionEvent;
 import com.wodnsivar.competitionportal.event.repository.CompetitionEventRepository;
+import com.wodnsivar.competitionportal.event.service.EffectiveEventConfiguration;
+import com.wodnsivar.competitionportal.event.service.EventConfigurationResolver;
+import com.wodnsivar.competitionportal.event.service.EventEligibilityService;
 import com.wodnsivar.competitionportal.leaderboard.dto.EventLeaderboardRow;
 import com.wodnsivar.competitionportal.leaderboard.dto.OverallLeaderboardResponse;
 import com.wodnsivar.competitionportal.score.entity.CompetitionScore;
@@ -27,6 +30,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -201,7 +205,18 @@ class LeaderboardRankingTest {
     }
 
     private EventRankingService eventRankingService() {
-        return new EventRankingService(null, null, null, null, null, tieBreakService);
+        EventConfigurationResolver configurations = mock(EventConfigurationResolver.class);
+        when(configurations.resolve(any(), any())).thenAnswer(invocation -> {
+            CompetitionEvent event = invocation.getArgument(0);
+            return new EffectiveEventConfiguration(
+                    event.getTimeCapSeconds(), event.getTotalReps(), event.getRepsPerRound(),
+                    event.getCappedScoringEnabled());
+        });
+        EventEligibilityService eligibility = mock(EventEligibilityService.class);
+        when(eligibility.explicitlyEligibleAthleteIds(any())).thenReturn(null);
+        return new EventRankingService(
+                null, null, null, null, null, tieBreakService,
+                configurations, eligibility);
     }
 
     private TestData maxWeightData(BigDecimal carlosWeight, BigDecimal diegoWeight) {

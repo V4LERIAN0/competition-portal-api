@@ -1,6 +1,7 @@
 package com.wodnsivar.competitionportal.event.dto;
 
 import com.wodnsivar.competitionportal.enums.EventStatus;
+import com.wodnsivar.competitionportal.enums.EventEligibilityMode;
 import com.wodnsivar.competitionportal.enums.RankingDirection;
 import com.wodnsivar.competitionportal.enums.ScoreType;
 import com.wodnsivar.competitionportal.enums.TiebreakType;
@@ -8,6 +9,9 @@ import com.wodnsivar.competitionportal.enums.WeightUnit;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
+
+import java.util.List;
 
 public record EventUpdateRequest(
 
@@ -60,6 +64,12 @@ public record EventUpdateRequest(
 
         Boolean scoreVisible,
 
-        EventStatus status
+        EventStatus status,
+
+        EventEligibilityMode eligibilityMode,
+
+        List<Long> eligibleAthleteIds,
+
+        List<@Valid EventCategoryConfigRequest> categoryConfigurations
 ) {
 }

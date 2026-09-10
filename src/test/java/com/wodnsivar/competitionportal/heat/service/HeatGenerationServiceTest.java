@@ -251,6 +251,7 @@ class HeatGenerationServiceTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }

@@ -174,6 +174,14 @@ public class HeatService {
         if (!athlete.getCompetition().getId().equals(heat.getCompetition().getId())) {
             throw new BadRequestException("The athlete and heat must belong to the same competition.");
         }
+        boolean categoryMismatch = heat.getAssignments().stream()
+                .filter(existing -> assignmentId == null
+                        || !java.util.Objects.equals(existing.getId(), assignmentId))
+                .anyMatch(existing -> !existing.getAthlete().getCategory().getId()
+                        .equals(athlete.getCategory().getId()));
+        if (categoryMismatch) {
+            throw new BadRequestException("A heat cannot contain athletes from different categories.");
+        }
         eventEligibility.requireEligible(heat.getEvent(), athlete);
         boolean alreadyAssigned = assignmentRepository.existsForEventAndAthleteExcludingHeatStatus(
                 heat.getEvent().getId(), athlete.getId(), HeatStatus.CANCELLED);

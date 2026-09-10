@@ -29,6 +29,12 @@ public class AdminHeatController {
                                        @Valid @RequestBody GenerateRandomHeatsRequest request) {
         return generationService.generateRandom(eventId, request);
     }
+    @PostMapping("/api/admin/events/{eventId}/heats/generate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<HeatResponse> generate(@PathVariable Long eventId,
+                                       @Valid @RequestBody GenerateHeatsRequest request) {
+        return generationService.generate(eventId, request);
+    }
     @GetMapping("/api/admin/heats/{heatId}")
     public HeatResponse get(@PathVariable Long heatId) { return heatService.getHeat(heatId); }
     @PutMapping("/api/admin/heats/{heatId}")

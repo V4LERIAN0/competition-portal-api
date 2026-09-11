@@ -1,15 +1,11 @@
 package com.wodnsivar.competitionportal.auth.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record LoginRequest(
-
-        @NotBlank(message = "Email is required")
-        @Email(message = "Email must be valid")
+    @NotBlank(message = "Usuario o correo requerido")
+        @jakarta.validation.constraints.Size(max = 150)
+        @com.fasterxml.jackson.annotation.JsonAlias("username")
         String email,
-
-        @NotBlank(message = "Password is required")
-        String password
-) {
-}
+    @NotBlank(message = "Password is required") @jakarta.validation.constraints.Size(max = 72)
+        String password) {}

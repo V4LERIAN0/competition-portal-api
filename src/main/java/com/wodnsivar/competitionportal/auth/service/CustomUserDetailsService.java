@@ -14,14 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserAccountRepository userAccountRepository;
+  private final UserAccountRepository userAccountRepository;
 
-    @Override
-    @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        UserAccount userAccount = userAccountRepository.findByEmail(email.trim().toLowerCase())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+  @Override
+  @Transactional(readOnly = true)
+  public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    String identifier = email.trim().toLowerCase(java.util.Locale.ROOT);
+    UserAccount userAccount =
+        (identifier.contains("@")
+                ? userAccountRepository.findByEmail(identifier)
+                : userAccountRepository.findByUsernameIgnoreCase(identifier))
+            .orElseThrow(() -> new UsernameNotFoundException("Credenciales incorrectas."));
 
-        return new UserPrincipal(userAccount);
-    }
+    return new UserPrincipal(userAccount);
+  }
 }
